@@ -1,0 +1,137 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 08.07.2023 17:06:02
+// Design Name: 
+// Module Name: booths_algorithm
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module booths_algorithm(Q,M,Y);
+input signed [7:0]Q;
+input signed [7:0]M;
+output signed [15:0]Y;
+wire signed [7:0] I1,I2,I3,I4,I5,I6,I7;
+wire signed [7:0] J1,J2,J3,J4,J5,J6,J7;
+wire signed K1,K2,K3,K4,K5,K6,K7;
+wire K8;
+booth_substep step1(8'b00000000,M,Q,1'b0,I1,J1,K1);
+booth_substep step2(I1,M,J1,K1,I2,J2,K2);
+booth_substep step3(I2,M,J2,K2,I3,J3,K3);
+booth_substep step4(I3,M,J3,K3,I4,J4,K4);
+booth_substep step5(I4,M,J4,K4,I5,J5,K5);
+booth_substep step6(I5,M,J5,K5,I6,J6,K6);
+booth_substep step7(I6,M,J6,K6,I7,J7,K7);
+booth_substep step8(I7,M,J7,K7,Y[15:8],Y[7:0],K8);
+endmodule
+
+module full_adder(x,y,cin,sum,cout);
+input x,y;
+input cin;
+output sum;
+output cout;
+assign sum = cin*((~x)*(~y) + x*y) + (~cin)*((~x)*y + x*(~y));
+assign cout = x*y + cin*(x+y);
+endmodule
+
+
+module booth_adder(A,M,sum);
+input [7:0]A;
+input [7:0]M;
+output [7:0]sum;
+wire cout;
+wire i[7:0];
+full_adder fa1(A[0],M[0],1'b0,sum[0],i[0]);
+full_adder fa2(A[1],M[1],i[0],sum[1],i[1]);
+full_adder fa3(A[2],M[2],i[1],sum[2],i[2]);
+full_adder fa4(A[3],M[3],i[2],sum[3],i[3]);
+full_adder fa5(A[4],M[4],i[3],sum[4],i[4]);
+full_adder fa6(A[5],M[5],i[4],sum[5],i[5]);
+full_adder fa7(A[6],M[6],i[5],sum[6],i[6]);
+full_adder fa8(A[7],M[7],i[6],sum[7],cout);
+endmodule
+
+module booth_sub(A,M,sub);
+input [7:0]M;
+input [7:0]A;
+output [7:0]sub;
+wire [7:0]ib;
+wire [7:0]q;
+wire cout;
+not(ib[0],M[0]);
+not(ib[1],M[1]);
+not(ib[2],M[2]);
+not(ib[3],M[3]);
+not(ib[4],M[4]);
+not(ib[5],M[5]);
+not(ib[6],M[6]);
+not(ib[7],M[7]);
+
+full_adder fa1(A[0],ib[0],1'b1,sub[0],q[0]);
+full_adder fa2(A[1],ib[1],q[0],sub[1],q[1]);
+full_adder fa3(A[2],ib[2],q[1],sub[2],q[2]);
+full_adder fa4(A[3],ib[3],q[2],sub[3],q[3]);
+full_adder fa5(A[4],ib[4],q[3],sub[4],q[4]);
+full_adder fa6(A[5],ib[5],q[4],sub[5],q[5]);
+full_adder fa7(A[6],ib[6],q[5],sub[6],q[6]);
+full_adder fa8(A[7],ib[7],q[6],sub[7],cout);
+endmodule
+
+module booth_substep(A,M,Q,Qres,ta,tq,tqres);
+input wire signed [7:0]A;
+input wire signed [7:0]M;
+input wire signed [7:0]Q;
+wire [7:0]addam;
+wire [7:0]subam;
+output reg signed [7:0]ta;
+output reg signed [7:0]tq;
+output reg signed tqres;
+booth_adder myadd(A,M,addam);
+booth_sub mysub(A,M,subam);
+input wire signed Qres;
+always @(*)
+begin
+if(Q[0] == Qres)
+begin
+tqres = Q[0];
+tq = Q>>1;
+tq[7] = A[0];
+ta = A>>1;
+if(A[7] == 1)
+ta[7] = 1;
+end
+else if(Q[0] == 1 && Qres == 0)
+begin
+ta = subam;
+tqres = Q[0];
+tq = Q>>1;
+tq[7] = ta[0];
+ta = ta>>1;
+if(subam[7] == 1)
+ta[7] = 1;
+end
+else
+begin
+ta = addam;
+tqres = Q[0];
+tq = Q>>1;
+tq[7] = ta[0];
+ta = ta>>1;
+if(addam[7] == 1)
+ta[7] = 1;
+end
+end
+endmodule
